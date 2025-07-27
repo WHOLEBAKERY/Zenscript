@@ -1,0 +1,221 @@
+--// DELTA DROP MENU – 8 CHEATS W/ INDICATORS (Inf Jump, ESP, Invis, God, Speed, Teleport, No‑Clip, Swim)
+local Players          = game:GetService("Players")
+local RunService       = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local player           = Players.LocalPlayer
+local mouse            = player:GetMouse()
+
+-- cleanup old GUI
+pcall(function() player.PlayerGui:FindFirstChild("DeltaDropGui"):Destroy() end)
+
+-- colors
+local OFF_COLOR = Color3.fromRGB(60,60,60)
+local ON_COLOR  = Color3.fromRGB(0,200,0)
+
+-- flags
+local flags = {
+    infJump  = false,
+    esp      = false,
+    invis    = false,
+    god      = false,
+    speed    = false,
+    teleport = false,
+    noclip   = false,
+    swim     = false,
+}
+
+-- speed settings
+local defaultSpeed = 16
+local superSpeed   = 100
+
+-- GUI root
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.Name = "DeltaDropGui"; screenGui.ResetOnSpawn = false
+
+-- Circle “C” toggle
+local circleBtn = Instance.new("TextButton", screenGui)
+circleBtn.Name                   = "CircleToggle"
+circleBtn.Text                   = "C"
+circleBtn.Size                   = UDim2.new(0,50,0,50)
+circleBtn.Position               = UDim2.new(0.45,0,0.4,0)
+circleBtn.AnchorPoint            = Vector2.new(0.5,0.5)
+circleBtn.BackgroundColor3       = Color3.fromRGB(40,40,40)
+circleBtn.BackgroundTransparency = 0.2
+circleBtn.BorderSizePixel        = 0
+circleBtn.Font                   = Enum.Font.SourceSansBold
+circleBtn.TextSize               = 28
+circleBtn.TextColor3             = Color3.fromRGB(255,255,255)
+circleBtn.TextScaled             = true
+circleBtn.ZIndex                 = 5
+
+-- Dropdown frame (8*35 + padding = 285)
+local dropFrame = Instance.new("Frame", screenGui)
+dropFrame.Name             = "DropMenu"
+dropFrame.Size             = UDim2.new(0,180,0,285)
+dropFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+dropFrame.BorderSizePixel  = 0
+dropFrame.Visible          = false
+dropFrame.ZIndex           = 4
+dropFrame.Active           = true
+dropFrame.Draggable        = true
+
+-- hold button refs
+local buttons = {}
+
+-- helper to make toggle buttons
+local function makeBtn(key,label,order,cb)
+    local btn = Instance.new("TextButton",dropFrame)
+    btn.Name             = key
+    btn.Size             = UDim2.new(1,-10,0,30)
+    btn.Position         = UDim2.new(0,5,0,5 + (order-1)*35)
+    btn.Text             = label
+    btn.Font             = Enum.Font.SourceSansBold
+    btn.TextSize         = 18
+    btn.TextScaled       = true
+    btn.BackgroundColor3 = OFF_COLOR
+    btn.BorderSizePixel  = 0
+    btn.TextColor3       = Color3.fromRGB(255,255,255)
+    btn.AutoButtonColor  = false
+    btn.ZIndex           = dropFrame.ZIndex + 1
+
+    btn.MouseButton1Click:Connect(function()
+        flags[key] = not flags[key]
+        btn.BackgroundColor3 = flags[key] and ON_COLOR or OFF_COLOR
+        cb()
+    end)
+
+    buttons[key] = btn
+end
+
+-- callbacks
+local function cbInfJump() end
+local function cbESP()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p~=player and p.Character then
+            local head = p.Character:FindFirstChild("Head")
+            if head then
+                local box = head:FindFirstChild("EspBox")
+                if flags.esp and not box then
+                    box = Instance.new("BillboardGui", head)
+                    box.Name        = "EspBox"
+                    box.Size        = UDim2.new(4,0,4,0)
+                    box.AlwaysOnTop = true
+                    local f = Instance.new("Frame", box)
+                    f.Size                 = UDim2.new(1,0,1,0)
+                    f.BackgroundColor3     = Color3.fromRGB(255,0,0)
+                    f.BackgroundTransparency = 0.5
+                elseif not flags.esp and box then
+                    box:Destroy()
+                end
+            end
+        end
+    end
+end
+local function cbInvis()
+    local char = player.Character
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.Name~="HumanoidRootPart" then
+                part.Transparency = flags.invis and 1 or 0
+            end
+        end
+    end
+end
+local function cbGod() end
+local function cbSpeed() end
+local function cbTeleport() end
+local function cbNoClip() end
+local function cbSwim() end
+
+-- make buttons (order: 1–8)
+makeBtn("infJump",  "Inf Jump",    1, cbInfJump)
+makeBtn("esp",      "ESP",         2, cbESP)
+makeBtn("invis",    "Invisibility",3, cbInvis)
+makeBtn("god",      "God Mode",    4, cbGod)
+makeBtn("speed",    "Super Speed", 5, cbSpeed)
+makeBtn("teleport", "Teleport",    6, cbTeleport)
+makeBtn("noclip",   "No‑Clip",     7, cbNoClip)
+makeBtn("swim",     "Swim",        8, cbSwim)
+
+-- position menu under C
+local function updatePos()
+    local p = circleBtn.AbsolutePosition
+    dropFrame.Position = UDim2.new(0, p.X, 0, p.Y + circleBtn.AbsoluteSize.Y + 5)
+end
+
+-- toggle dropdown
+circleBtn.MouseButton1Click:Connect(function()
+    dropFrame.Visible = not dropFrame.Visible
+    if dropFrame.Visible then updatePos() end
+end)
+
+-- drag C
+local dragging, off
+circleBtn.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then
+        dragging = true
+        off = Vector2.new(i.Position.X,i.Position.Y) - circleBtn.AbsolutePosition
+    end
+end)
+UserInputService.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseMovement) then
+        circleBtn.Position = UDim2.new(0, i.Position.X-off.X, 0, i.Position.Y-off.Y)
+        if dropFrame.Visible then updatePos() end
+    end
+end)
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Inf Jump
+UserInputService.JumpRequest:Connect(function()
+    if flags.infJump and player.Character then
+        player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- Main loop for persistent effects
+RunService.RenderStepped:Connect(function()
+    local char = player.Character
+    if not char then return end
+    local hum  = char:FindFirstChildOfClass("Humanoid")
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if hum then
+        -- God Mode lock
+        if flags.god then
+            hum.Health    = math.huge
+            hum.MaxHealth = math.huge
+            hum.BreakJointsOnDeath = false
+        end
+        -- Super Speed enforce
+        if flags.speed then
+            hum.WalkSpeed = superSpeed
+        elseif hum.WalkSpeed~=defaultSpeed then
+            hum.WalkSpeed = defaultSpeed
+        end
+    end
+    -- No‑Clip
+    if flags.noclip then
+        for _, p in pairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end
+    -- Swim
+    if flags.swim and hum then
+        hum:ChangeState(Enum.HumanoidStateType.Swimming)
+    end
+end)
+
+-- Teleport on tap & auto‑off
+mouse.Button1Down:Connect(function()
+    if flags.teleport then
+        local hit = mouse.Hit
+        if hit and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            player.Character.HumanoidRootPart.CFrame = CFrame.new(hit.p + Vector3.new(0,3,0))
+        end
+        flags.teleport = false
+        buttons.teleport.BackgroundColor3 = OFF_COLOR
+    end
+end)
