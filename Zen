@@ -1,219 +1,956 @@
---// DELTA DROP MENU – 8 CHEATS W/ INDICATORS (Inf Jump, ESP, Invis, God, Speed, Teleport, No‑Clip, Swim)
-local Players          = game:GetService("Players")
-local RunService       = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local player           = Players.LocalPlayer
-local mouse            = player:GetMouse()
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+local player            = Players.LocalPlayer
+local mouse             = player:GetMouse()
 
--- cleanup old GUI
-pcall(function() player.PlayerGui:FindFirstChild("DeltaDropGui"):Destroy() end)
+-- Clean up any existing GUI
+pcall(function()
+    local old = player.PlayerGui:FindFirstChild("DeltaDropGui")
+    if old then old:Destroy() end
+end)
 
--- colors
-local OFF_COLOR = Color3.fromRGB(60,60,60)
-local ON_COLOR  = Color3.fromRGB(0,200,0)
+-- Toggle colors
+local OFF_COLOR = Color3.fromRGB(60, 60, 60)
+local ON_COLOR  = Color3.fromRGB(0, 200, 0)
 
--- flags
+-- Flags for each cheat/UI
 local flags = {
-    infJump  = false,
-    esp      = false,
-    invis    = false,
-    god      = false,
-    speed    = false,
-    teleport = false,
-    noclip   = false,
-    swim     = false,
+    infJump      = false,
+    esp          = false,
+    invis        = false,
+    speed        = false,
+    teleport     = false,
+    noclip       = false,
+    safeZone     = false,
+    attachTool   = false,
+    teleportPad  = false,
 }
 
--- speed settings
-local defaultSpeed = 16
-local superSpeed   = 100
+-- Speed settings
+local DEFAULT_SPEED = 16
+local SUPER_SPEED   = 100
 
--- GUI root
+-- Root GUI
 local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.Name = "DeltaDropGui"; screenGui.ResetOnSpawn = false
+screenGui.Name = "DeltaDropGui"
+screenGui.ResetOnSpawn = false
 
--- Circle “C” toggle
-local circleBtn = Instance.new("TextButton", screenGui)
-circleBtn.Name                   = "CircleToggle"
-circleBtn.Text                   = "C"
-circleBtn.Size                   = UDim2.new(0,50,0,50)
-circleBtn.Position               = UDim2.new(0.45,0,0.4,0)
-circleBtn.AnchorPoint            = Vector2.new(0.5,0.5)
-circleBtn.BackgroundColor3       = Color3.fromRGB(40,40,40)
-circleBtn.BackgroundTransparency = 0.2
-circleBtn.BorderSizePixel        = 0
-circleBtn.Font                   = Enum.Font.SourceSansBold
-circleBtn.TextSize               = 28
-circleBtn.TextColor3             = Color3.fromRGB(255,255,255)
-circleBtn.TextScaled             = true
-circleBtn.ZIndex                 = 5
+-- Rebuilt main toggle as one interactive TextButton
+local btn = Instance.new("TextButton", screenGui)
+btn.Name                   = "ToggleBtn"
+btn.Size                   = UDim2.new(0, 50, 0, 50)
+btn.Position               = UDim2.new(0.45, 0, 0.4, 0)
+btn.BackgroundColor3       = Color3.fromRGB(255, 255, 0)  -- yellow
+btn.BackgroundTransparency = 0.5                         -- 50% transparent
+btn.BorderSizePixel        = 0
+btn.Active                 = true   -- allow input detection on mobile
+btn.Draggable              = true   -- built-in desktop dragging
+btn.AutoButtonColor        = false
+btn.ZIndex                 = 5
+btn.Text                   = ""     -- no text so touch isn’t blocked
 
--- Dropdown frame (8*35 + padding = 285)
+-- Child label purely for the “Z” visual
+local label = Instance.new("TextLabel", btn)
+label.Name             = "Label"
+label.Size             = UDim2.new(1, 0, 1, 0)
+label.Position         = UDim2.new(0, 0, 0, 0)
+label.BackgroundTransparency = 1
+label.Text             = "Z"
+label.Font             = Enum.Font.SourceSansBold
+label.TextSize         = 28
+label.TextColor3       = Color3.fromRGB(0, 0, 0) -- black “Z”
+label.TextScaled       = true
+label.Active           = false  -- non-interactive
+label.Selectable       = false
+label.ZIndex           = 6
+
+-- Dropdown frame
 local dropFrame = Instance.new("Frame", screenGui)
-dropFrame.Name             = "DropMenu"
-dropFrame.Size             = UDim2.new(0,180,0,285)
-dropFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-dropFrame.BorderSizePixel  = 0
-dropFrame.Visible          = false
-dropFrame.ZIndex           = 4
-dropFrame.Active           = true
-dropFrame.Draggable        = true
+dropFrame.Name               = "DropFrame"
+dropFrame.Size               = UDim2.new(0, 180, 0, 200)
+dropFrame.BackgroundColor3   = Color3.fromRGB(20, 20, 20)
+dropFrame.BorderSizePixel    = 0
+dropFrame.Visible            = false
+dropFrame.ZIndex             = 4
+dropFrame.Active             = true
+dropFrame.Draggable          = true
 
--- hold button refs
+-- Grid layout for buttons
+local grid = Instance.new("UIGridLayout", dropFrame)
+grid.CellSize    = UDim2.new(0, 85, 0, 30)
+grid.CellPadding = UDim2.new(0, 5, 0, 5)
+grid.SortOrder   = Enum.SortOrder.LayoutOrder
+
+-- Helper: create toggle buttons
 local buttons = {}
-
--- helper to make toggle buttons
-local function makeBtn(key,label,order,cb)
-    local btn = Instance.new("TextButton",dropFrame)
-    btn.Name             = key
-    btn.Size             = UDim2.new(1,-10,0,30)
-    btn.Position         = UDim2.new(0,5,0,5 + (order-1)*35)
-    btn.Text             = label
-    btn.Font             = Enum.Font.SourceSansBold
-    btn.TextSize         = 18
-    btn.TextScaled       = true
-    btn.BackgroundColor3 = OFF_COLOR
-    btn.BorderSizePixel  = 0
-    btn.TextColor3       = Color3.fromRGB(255,255,255)
-    btn.AutoButtonColor  = false
-    btn.ZIndex           = dropFrame.ZIndex + 1
-
-    btn.MouseButton1Click:Connect(function()
+local function makeButton(key, labelText, order, callback)
+    local b = Instance.new("TextButton", dropFrame)
+    b.Name         = key
+    b.LayoutOrder  = order
+    b.Text         = labelText
+    b.Font         = Enum.Font.SourceSansBold
+    b.TextSize     = 18
+    b.TextScaled   = true
+    b.BackgroundColor3 = OFF_COLOR
+    b.BorderSizePixel  = 0
+    b.TextColor3       = Color3.new(1,1,1)
+    b.AutoButtonColor  = false
+    b.ZIndex           = 5
+    b.MouseButton1Click:Connect(function()
         flags[key] = not flags[key]
-        btn.BackgroundColor3 = flags[key] and ON_COLOR or OFF_COLOR
-        cb()
+        b.BackgroundColor3 = flags[key] and ON_COLOR or OFF_COLOR
+        callback(flags[key])
     end)
-
-    buttons[key] = btn
+    buttons[key] = b
 end
 
--- callbacks
-local function cbInfJump() end
-local function cbESP()
+-- Cheat callbacks (empty placeholders or inline logic)
+local function cbInfJump(on) end
+
+local function cbESP(on)
     for _, p in pairs(Players:GetPlayers()) do
-        if p~=player and p.Character then
+        if p ~= player and p.Character then
             local head = p.Character:FindFirstChild("Head")
             if head then
                 local box = head:FindFirstChild("EspBox")
-                if flags.esp and not box then
+                if on and not box then
                     box = Instance.new("BillboardGui", head)
                     box.Name        = "EspBox"
-                    box.Size        = UDim2.new(4,0,4,0)
+                    box.Size        = UDim2.new(4, 0, 4, 0)
                     box.AlwaysOnTop = true
-                    local f = Instance.new("Frame", box)
-                    f.Size                 = UDim2.new(1,0,1,0)
-                    f.BackgroundColor3     = Color3.fromRGB(255,0,0)
-                    f.BackgroundTransparency = 0.5
-                elseif not flags.esp and box then
+                    local frame = Instance.new("Frame", box)
+                    frame.Size                 = UDim2.new(1,0,1,0)
+                    frame.BackgroundColor3     = Color3.fromRGB(255,0,0)
+                    frame.BackgroundTransparency = 0.5
+                elseif not on and box then
                     box:Destroy()
                 end
             end
         end
     end
 end
-local function cbInvis()
+
+local function cbInvis(on)
     local char = player.Character
     if char then
         for _, part in ipairs(char:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name~="HumanoidRootPart" then
-                part.Transparency = flags.invis and 1 or 0
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.Transparency = on and 1 or 0
             end
         end
     end
 end
-local function cbGod() end
-local function cbSpeed() end
-local function cbTeleport() end
-local function cbNoClip() end
-local function cbSwim() end
 
--- make buttons (order: 1–8)
-makeBtn("infJump",  "Inf Jump",    1, cbInfJump)
-makeBtn("esp",      "ESP",         2, cbESP)
-makeBtn("invis",    "Invisibility",3, cbInvis)
-makeBtn("god",      "God Mode",    4, cbGod)
-makeBtn("speed",    "Super Speed", 5, cbSpeed)
-makeBtn("teleport", "Teleport",    6, cbTeleport)
-makeBtn("noclip",   "No‑Clip",     7, cbNoClip)
-makeBtn("swim",     "Swim",        8, cbSwim)
-
--- position menu under C
-local function updatePos()
-    local p = circleBtn.AbsolutePosition
-    dropFrame.Position = UDim2.new(0, p.X, 0, p.Y + circleBtn.AbsoluteSize.Y + 5)
+local function cbSpeed(on)
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = on and SUPER_SPEED or DEFAULT_SPEED
+    end
 end
 
--- toggle dropdown
-circleBtn.MouseButton1Click:Connect(function()
-    dropFrame.Visible = not dropFrame.Visible
-    if dropFrame.Visible then updatePos() end
+local function cbTeleport(on) end
+local function cbNoClip(on) end
+
+-- Safe Zone callback — NO green box or icon, just open your menu directly
+local function cbSafeZone(on)
+    if on then
+        dropFrame.Visible = false
+        if not player.PlayerGui:FindFirstChild("SafeZoneGUI") then
+-- Ultimate SafeZone: Full Courtyard + Draggable Transparent Green “S” Button
+-- Paste into your Roblox executor (e.g. .delta) and run
+
+local Players = game:GetService("Players")
+local UIS     = game:GetService("UserInputService")
+local player  = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- === GUI SETUP ===
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name            = "SafeZoneGUI"
+screenGui.ResetOnSpawn    = false
+screenGui.Parent          = playerGui
+screenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
+
+-- The clickable & draggable button
+local btn = Instance.new("TextButton")
+btn.Name                   = "DragButton"
+btn.Size                   = UDim2.new(0, 50, 0, 50)
+btn.Position               = UDim2.new(0.4, 0, 0.4, 0)
+btn.BackgroundColor3       = Color3.fromRGB(0, 200, 0)
+btn.BackgroundTransparency = 0.5
+btn.BorderSizePixel        = 0
+btn.Text                   = ""        -- no text on the button itself
+btn.Active                 = true      -- needed for input events on mobile
+btn.Draggable              = true      -- built-in desktop drag
+btn.ZIndex                 = 10
+btn.Parent                 = screenGui
+
+-- A non-interactive label on top for the “S”
+local label = Instance.new("TextLabel", btn)
+label.Size                   = UDim2.new(1, 0, 1, 0)
+label.Position               = UDim2.new(0, 0, 0, 0)
+label.BackgroundTransparency = 1
+label.Text                   = "S"
+label.Font                   = Enum.Font.SourceSansBold
+label.TextSize               = 24
+label.TextColor3             = Color3.new(1, 1, 1)
+label.Active                 = false
+label.Selectable             = false
+label.ZIndex                 = 11
+
+-- === SAFEZONE STATE & FUNCTIONS ===
+local active, savedCF = false, nil
+local platform, walls, props = nil, {}, {}
+
+local function clearZone()
+    if platform then
+        platform:Destroy()
+        platform = nil
+    end
+    for _, p in ipairs(walls)  do p:Destroy() end
+    for _, p in ipairs(props)  do p:Destroy() end
+    walls, props = {}, {}
+end
+
+local function buildCourtyard(y, size, wallH)
+    local half = size / 2
+
+    -- Floor (Grass)
+    platform = Instance.new("Part")
+    platform.Name       = "SZFloor"
+    platform.Size       = Vector3.new(size, 1, size)
+    platform.CFrame     = CFrame.new(0, y, 0)
+    platform.Anchored   = true
+    platform.CanCollide = true
+    platform.Material   = Enum.Material.Grass
+    platform.BrickColor = BrickColor.new("Earth green")
+    platform.Parent     = workspace
+
+    -- Stone Walls
+    for _, d in ipairs({
+        {size, wallH, 2,    0, y + wallH/2,  half}, -- front
+        {size, wallH, 2,    0, y + wallH/2, -half}, -- back
+        {2,    wallH, size, half, y + wallH/2,  0}, -- right
+        {2,    wallH, size, -half, y + wallH/2, 0}, -- left
+    }) do
+        local w = Instance.new("Part")
+        w.Size         = Vector3.new(d[1], d[2], d[3])
+        w.CFrame       = CFrame.new(d[4], d[5], d[6])
+        w.Anchored     = true
+        w.CanCollide   = true
+        w.Material     = Enum.Material.Slate
+        w.BrickColor   = BrickColor.new("Dark stone grey")
+        w.Parent       = workspace
+        table.insert(walls, w)
+    end
+
+    -- Benches (Wood)
+    for _, pos in ipairs({
+        Vector3.new( half-5, y+1,  half-15),
+        Vector3.new(-half+5, y+1,  half-15),
+        Vector3.new( half-5, y+1, -half+15),
+        Vector3.new(-half+5, y+1, -half+15),
+    }) do
+        local bench = Instance.new("Part")
+        bench.Size       = Vector3.new(8,1,2)
+        bench.CFrame     = CFrame.new(pos)
+        bench.Anchored   = true
+        bench.CanCollide = true
+        bench.Material   = Enum.Material.WoodPlanks
+        bench.BrickColor = BrickColor.new("Reddish brown")
+        bench.Parent     = workspace
+        table.insert(props, bench)
+    end
+
+    -- Fireplace (Ring of Bricks + Fire)
+    for i = 1, 10 do
+        local angle = (i-1)/10 * math.pi*2
+        local brick = Instance.new("Part")
+        brick.Size       = Vector3.new(3,2,1)
+        brick.CFrame     = CFrame.new(3*math.cos(angle), y+1, 3*math.sin(angle))
+                               * CFrame.Angles(0, -angle, 0)
+        brick.Anchored   = true
+        brick.CanCollide = true
+        brick.Material   = Enum.Material.Brick
+        brick.BrickColor = BrickColor.new("Reddish brown")
+        brick.Parent     = workspace
+        table.insert(props, brick)
+    end
+    local firePart = Instance.new("Part")
+    firePart.Size         = Vector3.new(1,1,1)
+    firePart.CFrame       = CFrame.new(0, y+1.5, 0)
+    firePart.Transparency = 1
+    firePart.Anchored     = true
+    firePart.CanCollide   = false
+    firePart.Parent       = workspace
+    table.insert(props, firePart)
+    local emitter = Instance.new("ParticleEmitter", firePart)
+    emitter.Texture       = "rbxasset://textures/particles/flame.png"
+    emitter.Lifetime      = NumberRange.new(1,1.5)
+    emitter.Rate          = 80
+    emitter.Speed         = NumberRange.new(1,3)
+    emitter.Size          = NumberSequence.new{
+        NumberSequenceKeypoint.new(0,1),
+        NumberSequenceKeypoint.new(1,0)
+    }
+    emitter.LightEmission = 0.8
+
+    -- Trees (Layered Leaves)
+    for _, xOffset in ipairs({-half+10, half-10}) do
+        local trunk = Instance.new("Part")
+        trunk.Size       = Vector3.new(2,12,2)
+        trunk.CFrame     = CFrame.new(xOffset, y+6, -half+8)
+        trunk.Anchored   = true
+        trunk.CanCollide = true
+        trunk.Material   = Enum.Material.WoodPlanks
+        trunk.BrickColor = BrickColor.new("Brown")
+        trunk.Parent     = workspace
+        table.insert(props, trunk)
+
+        for j = 0, 2 do
+            local leaf = Instance.new("Part")
+            leaf.Shape      = Enum.PartType.Ball
+            leaf.Size       = Vector3.new(8-j*2, 4, 8-j*2)
+            leaf.CFrame     = CFrame.new(xOffset, y+12+j*3, -half+8)
+            leaf.Anchored   = true
+            leaf.CanCollide = false
+            leaf.Material   = Enum.Material.Grass
+            leaf.BrickColor = BrickColor.new("Bright green")
+            leaf.Parent     = workspace
+            table.insert(props, leaf)
+        end
+    end
+
+    -- Flower Patches
+    local palette = {"Bright red","New Yeller","Royal purple","Bright orange","Hot pink"}
+    for _, corner in ipairs({
+        Vector3.new( half-5, y+0.5,  half-5),
+        Vector3.new( half-5, y+0.5, -half+5),
+        Vector3.new(-half+5, y+0.5,  half-5),
+        Vector3.new(-half+5, y+0.5, -half+5),
+    }) do
+        for i = 1, 8 do
+            local flower = Instance.new("Part")
+            flower.Size        = Vector3.new(1,1,1)
+            flower.CFrame      = CFrame.new(
+                corner.X + math.random(-2,2),
+                corner.Y,
+                corner.Z + math.random(-2,2)
+            )
+            flower.Anchored    = true
+            flower.CanCollide  = false
+            flower.Material    = Enum.Material.SmoothPlastic
+            flower.BrickColor  = BrickColor.new(palette[math.random(#palette)])
+            flower.Shape       = Enum.PartType.Cylinder
+            flower.Orientation = Vector3.new(90,0,0)
+            flower.Parent      = workspace
+            table.insert(props, flower)
+        end
+    end
+
+    -- Lantern Posts
+    for _, d in ipairs({
+        { half-8, half-8},
+        { half-8,-half+8},
+        {-half+8, half-8},
+        {-half+8,-half+8},
+    }) do
+        local post = Instance.new("Part")
+        post.Size       = Vector3.new(1,8,1)
+        post.CFrame     = CFrame.new(d[1], y+4, d[2])
+        post.Anchored   = true
+        post.CanCollide = true
+        post.Material   = Enum.Material.Metal
+        post.BrickColor = BrickColor.new("Dark stone grey")
+        post.Parent     = workspace
+        table.insert(props, post)
+
+        local lantern = Instance.new("Part")
+        lantern.Size         = Vector3.new(1.5,1.5,1.5)
+        lantern.CFrame       = CFrame.new(d[1], y+7, d[2])
+        lantern.Anchored     = true
+        lantern.CanCollide   = false
+        lantern.Transparency = 0.2
+        lantern.Material     = Enum.Material.Glass
+        lantern.BrickColor   = BrickColor.new("New Yeller")
+        lantern.Parent       = workspace
+        table.insert(props, lantern)
+
+        local light = Instance.new("PointLight", lantern)
+        light.Range      = 25
+        light.Brightness = 2
+        light.Color      = Color3.fromRGB(255,200,100)
+    end
+end
+
+-- Toggle handler
+btn.MouseButton1Click:Connect(function()
+    local char = player.Character
+    local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if not active then
+        savedCF = hrp.CFrame
+        buildCourtyard(1000, 80, 25)
+        hrp.CFrame = CFrame.new(0, 1005, 0)
+        active = true
+    else
+        if savedCF then hrp.CFrame = savedCF end
+        clearZone()
+        active = false
+    end
 end)
 
--- drag C
-local dragging, off
-circleBtn.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then
+-- === MANUAL TOUCH DRAG LOGIC (mobile) ===
+-- Desktop drag works via btn.Draggable = true
+local dragging, dragInput, dragStart, startPos
+
+btn.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.Touch
+    or inp.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging, dragStart, startPos = true, inp.Position, btn.Position
+        inp.Changed:Connect(function()
+            if inp.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+btn.InputChanged:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.Touch
+    or inp.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = inp
+    end
+end)
+
+UIS.InputChanged:Connect(function(inp)
+    if inp == dragInput and dragging then
+        local delta = inp.Position - dragStart
+        btn.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+        end
+    else
+        local szGui = player.PlayerGui:FindFirstChild("SafeZoneGUI")
+        if szGui then szGui:Destroy() end
+    end
+end
+
+-- Attach Tool callback placeholder
+local function cbAttachTool(on)
+    if on then
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+
+local guiParent = lp:WaitForChild("PlayerGui")
+local old = guiParent:FindFirstChild("AttachToolGui")
+if old then old:Destroy() end
+
+local screen = Instance.new("ScreenGui", guiParent)
+screen.Name = "AttachToolGui"
+
+local frame = Instance.new("Frame", screen)
+frame.Size = UDim2.new(0, 300, 0, 160)
+frame.Position = UDim2.new(0.3, 0, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+
+local searchBox = Instance.new("TextBox", frame)
+searchBox.Size = UDim2.new(1, -20, 0, 25)
+searchBox.Position = UDim2.new(0, 10, 0, 10)
+searchBox.PlaceholderText = "Search display name..."
+searchBox.ClearTextOnFocus = false
+searchBox.Font = Enum.Font.SourceSans
+searchBox.TextSize = 18
+
+local selBtn = Instance.new("TextButton", frame)
+selBtn.Size = UDim2.new(1, -110, 0, 25)
+selBtn.Position = UDim2.new(0, 10, 0, 45)
+selBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+selBtn.TextColor3 = Color3.new(1, 1, 1)
+selBtn.Font = Enum.Font.SourceSansBold
+selBtn.TextSize = 18
+selBtn.Text = "Selected: None"
+
+local copyBtn = Instance.new("TextButton", frame)
+copyBtn.Size = UDim2.new(0, 80, 0, 25)
+copyBtn.Position = UDim2.new(1, -90, 0, 45)
+copyBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+copyBtn.TextColor3 = Color3.new(1, 1, 1)
+copyBtn.Font = Enum.Font.SourceSansBold
+copyBtn.TextSize = 18
+copyBtn.Text = "Copy"
+
+local prevBtn = Instance.new("TextButton", frame)
+prevBtn.Size = UDim2.new(0, 40, 0, 30)
+prevBtn.Position = UDim2.new(0.05, 0, 0.65, 0)
+prevBtn.Text = "<<"
+
+local nextBtn = Instance.new("TextButton", frame)
+nextBtn.Size = UDim2.new(0, 40, 0, 30)
+nextBtn.Position = UDim2.new(0.2, 0, 0.65, 0)
+nextBtn.Text = ">>"
+
+local attachBtn = Instance.new("TextButton", frame)
+attachBtn.Size = UDim2.new(0, 100, 0, 30)
+attachBtn.Position = UDim2.new(0.5, -50, 0.65, 0)
+attachBtn.Text = "Attach: OFF"
+
+local distBox = Instance.new("TextBox", frame)
+distBox.Size = UDim2.new(0, 50, 0, 20)
+distBox.Position = UDim2.new(0.05, 0, 0.85, 0)
+distBox.Text = "5"
+distBox.ClearTextOnFocus = false
+distBox.Font = Enum.Font.SourceSans
+distBox.TextSize = 18
+
+local distLabel = Instance.new("TextLabel", frame)
+distLabel.Size = UDim2.new(0.7, 0, 0, 20)
+distLabel.Position = UDim2.new(0.25, 0, 0.85, 0)
+distLabel.BackgroundTransparency = 1
+distLabel.TextColor3 = Color3.new(1, 1, 1)
+distLabel.Font = Enum.Font.SourceSans
+distLabel.TextSize = 18
+distLabel.Text = "Studs: 5"
+
+local minimizeBtn = Instance.new("TextButton", frame)
+minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+minimizeBtn.Position = UDim2.new(1, -45, 0, 5)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Font = Enum.Font.SourceSansBold
+minimizeBtn.TextSize = 14
+minimizeBtn.Text = "_"
+
+local closeBtn = Instance.new("TextButton", frame)
+closeBtn.Size = UDim2.new(0, 20, 0, 20)
+closeBtn.Position = UDim2.new(1, -25, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 14
+closeBtn.Text = "X"
+
+local miniBtn = Instance.new("TextButton", screen)
+miniBtn.Size = UDim2.new(0, 30, 0, 30)
+miniBtn.Position = frame.Position
+miniBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+miniBtn.TextColor3 = Color3.new(1, 1, 1)
+miniBtn.Font = Enum.Font.SourceSansBold
+miniBtn.TextSize = 20
+miniBtn.Text = "A"
+miniBtn.Visible = false
+
+local dist = 5
+local attached = false
+local alignPos, alignOri, att0, att1
+local playerList = {}
+local idx = 1
+
+local function refreshList()
+	playerList = {}
+	local term = searchBox.Text:lower()
+	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+			if term == "" or p.DisplayName:lower():find(term) then
+				local d = hrp and (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude or math.huge
+				table.insert(playerList, { p = p, d = d })
+			end
+		end
+	end
+	table.sort(playerList, function(a, b) return a.d < b.d end)
+	idx = 1
+	if #playerList > 0 then
+		selBtn.Text = "Selected: " .. playerList[idx].p.DisplayName
+	else
+		selBtn.Text = "Selected: None"
+	end
+end
+
+Players.PlayerAdded:Connect(refreshList)
+Players.PlayerRemoving:Connect(refreshList)
+lp.CharacterAdded:Connect(function() wait(1) refreshList() end)
+searchBox:GetPropertyChangedSignal("Text"):Connect(refreshList)
+refreshList()
+
+local function detach()
+	if alignPos then alignPos:Destroy() end
+	if alignOri then alignOri:Destroy() end
+	if att0 then att0:Destroy() end
+	if att1 then att1:Destroy() end
+	alignPos, alignOri, att0, att1 = nil, nil, nil, nil
+	attached = false
+	attachBtn.Text = "Attach: OFF"
+end
+
+local function attachTo(p)
+	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+	local thrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+	if not hrp or not thrp then return end
+	hrp.CFrame = thrp.CFrame * CFrame.new(0, 0, dist)
+	for _, obj in ipairs({alignPos, alignOri, att0, att1}) do if obj then obj:Destroy() end end
+	att0 = Instance.new("Attachment", hrp)
+	att1 = Instance.new("Attachment", thrp)
+	att1.Position = Vector3.new(0, 0, dist)
+	alignPos = Instance.new("AlignPosition", hrp)
+	alignPos.Attachment0 = att0
+	alignPos.Attachment1 = att1
+	alignPos.Responsiveness = 50
+	alignPos.MaxForce = 1e6
+	alignOri = Instance.new("AlignOrientation", hrp)
+	alignOri.Attachment0 = att0
+	alignOri.Attachment1 = att1
+	alignOri.Responsiveness = 50
+	alignOri.MaxTorque = 1e6
+	attached = true
+	attachBtn.Text = "Attach: ON"
+end
+
+prevBtn.MouseButton1Click:Connect(function()
+	if #playerList > 0 then
+		idx = idx > 1 and idx - 1 or #playerList
+		selBtn.Text = "Selected: " .. playerList[idx].p.DisplayName
+		if attached then attachTo(playerList[idx].p) end
+	end
+end)
+
+nextBtn.MouseButton1Click:Connect(function()
+	if #playerList > 0 then
+		idx = idx < #playerList and idx + 1 or 1
+		selBtn.Text = "Selected: " .. playerList[idx].p.DisplayName
+		if attached then attachTo(playerList[idx].p) end
+	end
+end)
+
+selBtn.MouseButton1Click:Connect(function() if playerList[idx] then attachTo(playerList[idx].p) end end)
+attachBtn.MouseButton1Click:Connect(function() if attached then detach() elseif playerList[idx] then attachTo(playerList[idx].p) end end)
+distBox.FocusLost:Connect(function()
+	local v = tonumber(distBox.Text)
+	if v and v >= 0 then dist = v end
+	distLabel.Text = "Studs: " .. dist
+	distBox.Text = tostring(dist)
+	if attached and playerList[idx] then attachTo(playerList[idx].p) end
+end)
+copyBtn.MouseButton1Click:Connect(function()
+	local entry = playerList[idx]
+	if entry and entry.p then pcall(function() setclipboard(entry.p.DisplayName) end) end
+end)
+closeBtn.MouseButton1Click:Connect(function() screen:Destroy() end)
+minimizeBtn.MouseButton1Click:Connect(function() frame.Visible = false miniBtn.Position = frame.Position miniBtn.Visible = true end)
+miniBtn.MouseButton1Click:Connect(function() frame.Position = miniBtn.Position frame.Visible = true miniBtn.Visible = false end)
+
+local dragging, dragInput, dragStart, startPos
+local frameDragging, frameDragInput, frameDragStart, frameStartPos
+
+miniBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = miniBtn.Position
+		input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+	end
+end)
+
+miniBtn.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		frameDragging = true
+		frameDragStart = input.Position
+		frameStartPos = frame.Position
+		input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then frameDragging = false end end)
+	end
+end)
+
+frame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		frameDragInput = input
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		miniBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+	if input == frameDragInput and frameDragging then
+		local delta = input.Position - frameDragStart
+		frame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
+	end
+end)
+    else
+        -- Destroy attach tool GUI safely here
+    end
+end
+
+-- Teleport Pad callback placeholder
+local function cbTeleportPad(on)
+    if on then
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local lp = Players.LocalPlayer
+
+local function getHRP()
+    local char = lp.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local portals = {A = {pos = nil, part = nil}, B = {pos = nil, part = nil}}
+local groundPad = {part = nil}
+
+local function placePortal(key)
+    local hrp = getHRP()
+    if not hrp then return end
+    local data = portals[key]
+    local cf = hrp.CFrame * CFrame.new(0, -3, 0)
+    data.pos = cf
+    if data.part then
+        data.part.CFrame = cf
+    else
+        local p = Instance.new("Part")
+        p.Name = "PortalPad" .. key
+        p.Size = Vector3.new(4, 1, 4)
+        p.Anchored = true
+        p.CanCollide = false
+        p.Material = Enum.Material.Neon
+        p.Color = (key == "A") and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(255, 85, 0)
+        p.CFrame = cf
+        p.Parent = workspace
+        data.part = p
+    end
+end
+
+local function gotoPortal(key)
+    local data = portals[key]
+    if not data.pos then return end
+    local hrp = getHRP()
+    if not hrp then return end
+    hrp.CFrame = data.pos + Vector3.new(0, 3, 0)
+end
+
+local function placeGroundPad()
+    local hrp = getHRP()
+    if not hrp then return end
+    local cf = hrp.CFrame * CFrame.new(0, -3, 0)
+    if groundPad.part then
+        groundPad.part.CFrame = cf
+    else
+        local p = Instance.new("Part")
+        p.Name = "GroundPad"
+        p.Size = Vector3.new(6, 1, 6)
+        p.Anchored = true
+        p.CanCollide = true
+        p.Material = Enum.Material.SmoothPlastic
+        p.Color = Color3.fromRGB(100, 100, 100)
+        p.CFrame = cf
+        p.Parent = workspace
+        groundPad.part = p
+    end
+end
+
+local function deleteGroundPad()
+    if groundPad.part and groundPad.part.Parent then
+        groundPad.part:Destroy()
+        groundPad.part = nil
+    end
+end
+
+local screen = Instance.new("ScreenGui", lp:WaitForChild("PlayerGui"))
+screen.Name = "PortalDropperGui"
+
+local frame = Instance.new("Frame", screen)
+frame.Size = UDim2.new(0, 200, 0, 260)
+frame.Position = UDim2.new(0.4, 0, 0.4, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.2
+frame.ClipsDescendants = true
+
+local titleBar = Instance.new("Frame", frame)
+titleBar.Size = UDim2.new(1, 0, 0, 24)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
+titleBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+titleBar.ZIndex = 3
+
+local closeBtn = Instance.new("TextButton", titleBar)
+closeBtn.Size = UDim2.new(0, 20, 0, 20)
+closeBtn.Position = UDim2.new(1, -24, 0, 2)
+closeBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 40)
+closeBtn.Text = "X"
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.ZIndex = 4
+
+local minimizeBtn = Instance.new("TextButton", titleBar)
+minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+minimizeBtn.Position = UDim2.new(1, -48, 0, 2)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+minimizeBtn.Text = "_"
+minimizeBtn.Font = Enum.Font.SourceSansBold
+minimizeBtn.TextSize = 14
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.ZIndex = 4
+
+local function makeButton(text, y, callback)
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1, -20, 0, 30)
+    btn.Position = UDim2.new(0, 10, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 18
+    btn.Text = text
+    btn.ZIndex = 2
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+makeButton("Set Portal A", 30, function() placePortal("A") end)
+makeButton("Set Portal B", 70, function() placePortal("B") end)
+makeButton("Go to Portal A", 110, function() gotoPortal("A") end)
+makeButton("Go to Portal B", 150, function() gotoPortal("B") end)
+makeButton("Spawn Ground Pad", 190, placeGroundPad)
+makeButton("Delete Ground Pad", 230, deleteGroundPad)
+
+local miniBtn = Instance.new("TextButton", screen)
+miniBtn.Size = UDim2.new(0, 40, 0, 40)
+miniBtn.Position = frame.Position
+miniBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 255)
+miniBtn.BackgroundTransparency = 0.3
+miniBtn.Text = ""
+miniBtn.ZIndex = 5
+local corner = Instance.new("UICorner", miniBtn)
+corner.CornerRadius = UDim.new(1, 0)
+
+closeBtn.MouseButton1Click:Connect(function() screen:Destroy() end)
+minimizeBtn.MouseButton1Click:Connect(function()
+    frame.Visible = false
+    miniBtn.Position = frame.Position
+    miniBtn.Visible = true
+end)
+miniBtn.MouseButton1Click:Connect(function()
+    frame.Position = miniBtn.Position
+    frame.Visible = true
+    miniBtn.Visible = false
+end)
+
+local dragging, dragInput, dragStart, startPos
+local frameDragging, frameDragInput, frameDragStart, frameStartPos
+
+miniBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
-        off = Vector2.new(i.Position.X,i.Position.Y) - circleBtn.AbsolutePosition
+        dragStart = input.Position
+        startPos = miniBtn.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
-UserInputService.InputChanged:Connect(function(i)
-    if dragging and (i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseMovement) then
-        circleBtn.Position = UDim2.new(0, i.Position.X-off.X, 0, i.Position.Y-off.Y)
-        if dropFrame.Visible then updatePos() end
+miniBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
-UserInputService.InputEnded:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.Touch or i.UserInputType==Enum.UserInputType.MouseButton1 then
-        dragging = false
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragging = true
+        frameDragStart = input.Position
+        frameStartPos = frame.Position
+        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then frameDragging = false end end)
+    end
+end)
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        frameDragInput = input
+    end
+end)
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        miniBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    if input == frameDragInput and frameDragging then
+        local delta = input.Position - frameDragStart
+        frame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
     end
 end)
 
--- Inf Jump
+lp.AncestryChanged:Connect(function(_, parent)
+    if not parent then
+        for _, data in pairs(portals) do
+            if data.part then data.part:Destroy() end
+        end
+        if groundPad.part then groundPad.part:Destroy() end
+    end
+end)
+    else
+        -- Destroy teleport pad GUI safely here
+    end
+end
+
+-- Create menu buttons
+makeButton("infJump",    "Inf Jump",    1, cbInfJump)
+makeButton("esp",        "ESP",         2, cbESP)
+makeButton("invis",      "Invisibility",3, cbInvis)
+makeButton("speed",      "Super Speed", 4, cbSpeed)
+makeButton("teleport",   "Teleport",    5, cbTeleport)
+makeButton("noclip",     "No-Clip",     6, cbNoClip)
+makeButton("safeZone",   "Safe Zone",   7, cbSafeZone)
+makeButton("attachTool", "Attach Tool", 8, cbAttachTool)
+makeButton("teleportPad","Teleport Pad",9, cbTeleportPad)
+
+-- Dropdown positioning function
+local function updateMenuPos()
+    local absPos = btn.AbsolutePosition
+    dropFrame.Position = UDim2.new(0, absPos.X, 0, absPos.Y + btn.AbsoluteSize.Y + 5)
+end
+
+-- Toggle dropdown
+btn.MouseButton1Click:Connect(function()
+    dropFrame.Visible = not dropFrame.Visible
+    if dropFrame.Visible then updateMenuPos() end
+end)
+
+-- Inf Jump implementation
 UserInputService.JumpRequest:Connect(function()
     if flags.infJump and player.Character then
         player.Character:FindFirstChildOfClass("Humanoid"):ChangeState(Enum.HumanoidStateType.Jumping)
     end
 end)
 
--- Main loop for persistent effects
+-- Main loop: speed & noclip
 RunService.RenderStepped:Connect(function()
     local char = player.Character
     if not char then return end
-    local hum  = char:FindFirstChildOfClass("Humanoid")
-    local root = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then
-        -- God Mode lock
-        if flags.god then
-            hum.Health    = math.huge
-            hum.MaxHealth = math.huge
-            hum.BreakJointsOnDeath = false
-        end
-        -- Super Speed enforce
-        if flags.speed then
-            hum.WalkSpeed = superSpeed
-        elseif hum.WalkSpeed~=defaultSpeed then
-            hum.WalkSpeed = defaultSpeed
+        if flags.speed then hum.WalkSpeed = SUPER_SPEED
+        else hum.WalkSpeed = DEFAULT_SPEED
         end
     end
-    -- No‑Clip
     if flags.noclip then
-        for _, p in pairs(char:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanCollide = false end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
-    end
-    -- Swim
-    if flags.swim and hum then
-        hum:ChangeState(Enum.HumanoidStateType.Swimming)
     end
 end)
 
--- Teleport on tap & auto‑off
+-- Teleport click
 mouse.Button1Down:Connect(function()
-    if flags.teleport then
-        local hit = mouse.Hit
-        if hit and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            player.Character.HumanoidRootPart.CFrame = CFrame.new(hit.p + Vector3.new(0,3,0))
+    if flags.teleport and player.Character then
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and mouse.Hit then
+            hrp.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0,3,0))
         end
         flags.teleport = false
         buttons.teleport.BackgroundColor3 = OFF_COLOR
