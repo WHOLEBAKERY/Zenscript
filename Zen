@@ -50,6 +50,40 @@ btn.AutoButtonColor        = false
 btn.ZIndex                 = 5
 btn.Text                   = ""     -- no text so touch isn’t blocked
 
+-- Define colors for the button states
+local BTN_RED_NORMAL = Color3.fromRGB(190, 20, 20)
+local BTN_RED_PRESSED = Color3.fromRGB(120, 15, 15)
+
+-- Rebuilt main toggle as one interactive TextButton
+local btn = Instance.new("TextButton", screenGui)
+btn.Name                   = "ToggleBtn"
+btn.Size                   = UDim2.new(0, 50, 0, 50)
+btn.Position               = UDim2.new(0.45, 0, 0.4, 0)
+btn.BackgroundColor3       = BTN_RED_NORMAL -- Set base color to red
+btn.BorderSizePixel        = 0
+btn.Active                 = true
+btn.Draggable              = true
+btn.AutoButtonColor        = false -- Keep this false for manual color changes
+btn.ZIndex                 = 5
+btn.Text                   = ""
+
+-- ADDITION: Add UICorner for round edges
+local corner = Instance.new("UICorner", btn)
+corner.CornerRadius = UDim.new(0.2, 0) -- Adjust the first number for more/less roundness
+
+-- ADDITION: Add UIGradient for the metallic/glossy look
+local gradient = Instance.new("UIGradient", btn)
+gradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), -- White highlight at the top
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 180, 180))  -- Fades to a lighter red
+})
+gradient.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.8), -- Mostly transparent at the top
+    NumberSequenceKeypoint.new(0.5, 0.9), -- Gets more transparent
+    NumberSequenceKeypoint.new(1, 1)      -- Fully transparent at the bottom
+})
+gradient.Rotation = -45 -- Angled sheen
+
 -- Child label purely for the “Z” visual
 local label = Instance.new("TextLabel", btn)
 label.Name             = "Label"
@@ -59,11 +93,26 @@ label.BackgroundTransparency = 1
 label.Text             = "Z"
 label.Font             = Enum.Font.SourceSansBold
 label.TextSize         = 28
-label.TextColor3       = Color3.fromRGB(0, 0, 0) -- black “Z”
+label.TextColor3       = Color3.fromRGB(255, 255, 255) -- MODIFIED: White “Z”
 label.TextScaled       = true
-label.Active           = false  -- non-interactive
+label.Active           = false
 label.Selectable       = false
 label.ZIndex           = 6
+
+-- ADDITION: Manually handle button press color changes
+btn.InputBegan:Connect(function(input)
+    -- Check if the input is a left mouse click or a touch on a screen
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        btn.BackgroundColor3 = BTN_RED_PRESSED -- Change to the darker "pressed" color
+    end
+end)
+
+btn.InputEnded:Connect(function(input)
+    -- Check if the input that ended was a left click or touch
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        btn.BackgroundColor3 = BTN_RED_NORMAL -- Change back to the normal red color
+    end
+end)
 
 -- Dropdown frame
 local dropFrame = Instance.new("Frame", screenGui)
