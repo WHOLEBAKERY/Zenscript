@@ -36,20 +36,6 @@ local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 screenGui.Name = "DeltaDropGui"
 screenGui.ResetOnSpawn = false
 
--- Rebuilt main toggle as one interactive TextButton
-local btn = Instance.new("TextButton", screenGui)
-btn.Name                   = "ToggleBtn"
-btn.Size                   = UDim2.new(0, 50, 0, 50)
-btn.Position               = UDim2.new(0.45, 0, 0.4, 0)
-btn.BackgroundColor3       = Color3.fromRGB(255, 255, 0)  -- yellow
-btn.BackgroundTransparency = 0.5                         -- 50% transparent
-btn.BorderSizePixel        = 0
-btn.Active                 = true   -- allow input detection on mobile
-btn.Draggable              = true   -- built-in desktop dragging
-btn.AutoButtonColor        = false
-btn.ZIndex                 = 5
-btn.Text                   = ""     -- no text so touch isn’t blocked
-
 -- Define colors for the button states
 local BTN_RED_NORMAL = Color3.fromRGB(190, 20, 20)
 local BTN_RED_PRESSED = Color3.fromRGB(120, 15, 15)
