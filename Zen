@@ -572,29 +572,29 @@ local function refreshList()
 		end
 	end
 	table.sort(playerList, function(a, b) return a.d < b.d end)
-	idx = 1
-	if #playerList > 0 then
-		selBtn.Text = "Selected: " .. playerList[idx].p.DisplayName
-	else
-		selBtn.Text = "Selected: None"
-	end
+	 idx = 1
+    selBtn.Text = #playerList > 0 and "Selected: " .. playerList[idx].p.DisplayName or "Selected: None"
 end
 
 Players.PlayerAdded:Connect(refreshList)
 Players.PlayerRemoving:Connect(refreshList)
-lp.CharacterAdded:Connect(function() wait(1) refreshList() end)
+lp.CharacterAdded:Connect(function()
+    wait(1)
+    refreshList()
+end)
 searchBox:GetPropertyChangedSignal("Text"):Connect(refreshList)
 refreshList()
 
+-- Detach function
 local function detach()
-	if alignPos then alignPos:Destroy() end
-	if alignOri then alignOri:Destroy() end
-	if att0 then att0:Destroy() end
-	if att1 then att1:Destroy() end
-	alignPos, alignOri, att0, att1 = nil, nil, nil, nil
-	attached = false
-	attachBtn.Text = "Attach: OFF"
+    if alignPos then alignPos:Destroy() end
+    if alignOri then alignOri:Destroy() end
+    if att0 then att0:Destroy() end
+    if att1 then att1:Destroy() end
+    attached = false
+    attachBtn.Text = "Attach: OFF"
 end
+
 
 local function attachTo(p)
 	local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
