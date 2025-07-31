@@ -674,7 +674,9 @@ copyBtn.MouseButton1Click:Connect(function()
 	local entry = playerList[idx]
 	if entry and entry.p then pcall(function() setclipboard(entry.p.DisplayName) end) end
 end)
-closeBtn.MouseButton1Click:Connect(function() screen:Destroy() end)
+closeBtn.MouseButton1Click:Connect(function()
+    detach()
+    screen:Destroy()
 minimizeBtn.MouseButton1Click:Connect(function() frame.Visible = false miniBtn.Position = frame.Position miniBtn.Visible = true end)
 miniBtn.MouseButton1Click:Connect(function() frame.Position = miniBtn.Position frame.Visible = true miniBtn.Visible = false end)
 
