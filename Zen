@@ -653,12 +653,22 @@ end)
 
 selBtn.MouseButton1Click:Connect(function() if playerList[idx] then attachTo(playerList[idx].p) end end)
 attachBtn.MouseButton1Click:Connect(function() if attached then detach() elseif playerList[idx] then attachTo(playerList[idx].p) end end)
-distBox.FocusLost:Connect(function()
-	local v = tonumber(distBox.Text)
-	if v and v >= 0 then dist = v end
-	distLabel.Text = "Studs: " .. dist
-	distBox.Text = tostring(dist)
-	if attached and playerList[idx] then attachTo(playerList[idx].p) end
+dirBtn.MouseButton1Click:Connect(function()
+    modeIndex = modeIndex < #modes and modeIndex + 1 or 1
+    dirBtn.Text = "Direction: " .. (modes[modeIndex]:sub(1,1):upper() .. modes[modeIndex]:sub(2))
+    if attached and playerList[idx] then attachTo(playerList[idx].p) end
+end)
+
+distDec.MouseButton1Click:Connect(function()
+    if dist > 1 then dist = dist - 1 end
+    distBox.Text = tostring(dist)
+    if attached and playerList[idx] then attachTo(playerList[idx].p) end
+end)
+
+distInc.MouseButton1Click:Connect(function()
+    dist = dist + 1
+    distBox.Text = tostring(dist)
+    if attached and playerList[idx] then attachTo(playerList[idx].p) end
 end)
 copyBtn.MouseButton1Click:Connect(function()
 	local entry = playerList[idx]
