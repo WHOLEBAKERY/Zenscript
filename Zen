@@ -502,23 +502,29 @@ attachBtn.Size = UDim2.new(0, 100, 0, 30)
 attachBtn.Position = UDim2.new(0.5, -50, 0.65, 0)
 attachBtn.Text = "Attach: OFF"
 
-local distBox = Instance.new("TextBox", frame)
+local dirBtn = Instance.new("TextButton", frame)
+dirBtn.Size = UDim2.new(0, 100, 0, 25)
+dirBtn.Position = UDim2.new(0.05, 0, 0.45, 0)
+dirBtn.Text = "Direction: Behind"
+
+local distDec = Instance.new("TextButton", frame)
+distDec.Size = UDim2.new(0, 20, 0, 20)
+distDec.Position = UDim2.new(0.65, 0, 0.85, 0)
+distDec.Text = "-"
+
+local distBox = Instance.new("TextLabel", frame)
 distBox.Size = UDim2.new(0, 50, 0, 20)
-distBox.Position = UDim2.new(0.05, 0, 0.85, 0)
+distBox.Position = UDim2.new(0.75, 0, 0.85, 0)
 distBox.Text = "5"
-distBox.ClearTextOnFocus = false
+distBox.BackgroundTransparency = 1
 distBox.Font = Enum.Font.SourceSans
 distBox.TextSize = 18
+distBox.TextColor3 = Color3.new(1,1,1)
 
-local distLabel = Instance.new("TextLabel", frame)
-distLabel.Size = UDim2.new(0.7, 0, 0, 20)
-distLabel.Position = UDim2.new(0.25, 0, 0.85, 0)
-distLabel.BackgroundTransparency = 1
-distLabel.TextColor3 = Color3.new(1, 1, 1)
-distLabel.Font = Enum.Font.SourceSans
-distLabel.TextSize = 18
-distLabel.Text = "Studs: 5"
-
+local distInc = Instance.new("TextButton", frame)
+distInc.Size = UDim2.new(0, 20, 0, 20)
+distInc.Position = UDim2.new(0.85, 0, 0.85, 0)
+distInc.Text = "+"
 local minimizeBtn = Instance.new("TextButton", frame)
 minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
 minimizeBtn.Position = UDim2.new(1, -45, 0, 5)
