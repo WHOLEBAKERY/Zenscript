@@ -634,60 +634,59 @@ distBox.FocusLost:Connect(function()
 	local v = tonumber(distBox.Text)
 	if v and v >= 0 then dist = v end
 	distLabel.Text = "Studs: " .. dist
-	distBox.Text = tostring(dist)
-	if attached and playerList[idx] then attachTo(playerList[idx].p) end
-end)
-copyBtn.MouseButton1Click:Connect(function()
-	local entry = playerList[idx]
-	if entry and entry.p then pcall(function() setclipboard(entry.p.DisplayName) end) end
-end)
-closeBtn.MouseButton1Click:Connect(function() screen:Destroy() end)
-minimizeBtn.MouseButton1Click:Connect(function() frame.Visible = false miniBtn.Position = frame.Position miniBtn.Visible = true end)
-miniBtn.MouseButton1Click:Connect(function() frame.Position = miniBtn.Position frame.Visible = true miniBtn.Visible = false end)
+local Players = game:GetService("Players") local UIS = game:GetService("UserInputService") local lp = Players.LocalPlayer
 
-local dragging, dragInput, dragStart, startPos
-local frameDragging, frameDragInput, frameDragStart, frameStartPos
+local guiParent = lp:WaitForChild("PlayerGui") local old = guiParent:FindFirstChild("AttachToolGui") if old then old:Destroy() end
 
-miniBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		dragStart = input.Position
-		startPos = miniBtn.Position
-		input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-	end
-end)
+local screen = Instance.new("ScreenGui", guiParent) screen.Name = "AttachToolGui"
 
-miniBtn.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		dragInput = input
-	end
-end)
+local frame = Instance.new("Frame", screen) frame.Size = UDim2.new(0, 300, 0, 160) frame.Position = UDim2.new(0.3, 0, 0.3, 0) frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50) frame.Active = true frame.Draggable = true
 
-frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		frameDragging = true
-		frameDragStart = input.Position
-		frameStartPos = frame.Position
-		input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then frameDragging = false end end)
-	end
-end)
+local searchBox = Instance.new("TextBox", frame) searchBox.Size = UDim2.new(1, -20, 0, 25) searchBox.Position = UDim2.new(0, 10, 0, 10) searchBox.PlaceholderText = "Search display name..." searchBox.Text = "" searchBox.ClearTextOnFocus = false searchBox.Font = Enum.Font.SourceSans searchBox.TextSize = 18
 
-frame.InputChanged:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-		frameDragInput = input
-	end
-end)
+local selBtn = Instance.new("TextButton", frame) selBtn.Size = UDim2.new(1, -110, 0, 25) selBtn.Position = UDim2.new(0, 10, 0, 45) selBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) selBtn.TextColor3 = Color3.new(1, 1, 1) selBtn.Font = Enum.Font.SourceSansBold selBtn.TextSize = 18 selBtn.Text = "Selected: None"
 
-UIS.InputChanged:Connect(function(input)
-	if input == dragInput and dragging then
-		local delta = input.Position - dragStart
-		miniBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
-	if input == frameDragInput and frameDragging then
-		local delta = input.Position - frameDragStart
-		frame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
-	end
-end)
+local copyBtn = Instance.new("TextButton", frame) copyBtn.Size = UDim2.new(0, 80, 0, 25) copyBtn.Position = UDim2.new(1, -90, 0, 45) copyBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70) copyBtn.TextColor3 = Color3.new(1, 1, 1) copyBtn.Font = Enum.Font.SourceSansBold copyBtn.TextSize = 18 copyBtn.Text = "Copy"
+
+local prevBtn = Instance.new("TextButton", frame) prevBtn.Size = UDim2.new(0, 40, 0, 30) prevBtn.Position = UDim2.new(0.05, 0, 0.65, 0) prevBtn.Text = "<<"
+
+local nextBtn = Instance.new("TextButton", frame) nextBtn.Size = UDim2.new(0, 40, 0, 30) nextBtn.Position = UDim2.new(0.2, 0, 0.65, 0) nextBtn.Text = ">>"
+
+local attachBtn = Instance.new("TextButton", frame) attachBtn.Size = UDim2.new(0, 100, 0, 30) attachBtn.Position = UDim2.new(0.5, -50, 0.65, 0) attachBtn.Text = "Attach: OFF"
+
+local dirBtn = Instance.new("TextButton", frame) dirBtn.Size = UDim2.new(0, 100, 0, 25) dirBtn.Position = UDim2.new(0.05, 0, 0.45, 0) dirBtn.Text = "Direction: Behind"
+
+local distDec = Instance.new("TextButton", frame) distDec.Size = UDim2.new(0, 20, 0, 20) distDec.Position = UDim2.new(0.65, 0, 0.85, 0) distDec.Text = "-"
+
+local distBox = Instance.new("TextLabel", frame) distBox.Size = UDim2.new(0, 50, 0, 20) distBox.Position = UDim2.new(0.75, 0, 0.85, 0) distBox.Text = "5" distBox.BackgroundTransparency = 1 distBox.Font = Enum.Font.SourceSans distBox.TextSize = 18 distBox.TextColor3 = Color3.new(1,1,1)
+
+local distInc = Instance.new("TextButton", frame) distInc.Size = UDim2.new(0, 20, 0, 20) distInc.Position = UDim2.new(0.85, 0, 0.85, 0) distInc.Text = "+"
+
+local minimizeBtn = Instance.new("TextButton", frame) minimizeBtn.Size = UDim2.new(0, 20, 0, 20) minimizeBtn.Position = UDim2.new(1, -45, 0, 5) minimizeBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80) minimizeBtn.TextColor3 = Color3.new(1, 1, 1) minimizeBtn.Font = Enum.Font.SourceSansBold minimizeBtn.TextSize = 14 minimizeBtn.Text = "_"
+
+local closeBtn = Instance.new("TextButton", frame) closeBtn.Size = UDim2.new(0, 20, 0, 20) closeBtn.Position = UDim2.new(1, -25, 0, 5) closeBtn.BackgroundColor3 = Color3.fromRGB(120, 40, 40) closeBtn.TextColor3 = Color3.new(1, 1, 1) closeBtn.Font = Enum.Font.SourceSansBold closeBtn.TextSize = 14 closeBtn.Text = "X"
+
+local miniBtn = Instance.new("TextButton", screen) miniBtn.Size = UDim2.new(0, 30, 0, 30) miniBtn.Position = frame.Position miniBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60) miniBtn.TextColor3 = Color3.new(1, 1, 1) miniBtn.Font = Enum.Font.SourceSansBold miniBtn.TextSize = 20 miniBtn.Text = "A" miniBtn.Visible = false
+
+local dist = 5 local attached = false local alignPos, alignOri, att0, att1 local playerList = {} local idx = 1 local modes = {"behind","front","left","right"} local modeIndex = 1
+
+local function refreshList() playerList = {} local term = searchBox.Text:lower() local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") for _, p in ipairs(Players:GetPlayers()) do if p ~= lp and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then if term == "" or p.DisplayName:lower():find(term) then local d = hrp and (p.Character.HumanoidRootPart.Position - hrp.Position).Magnitude or math.huge table.insert(playerList, {p = p, d = d}) end end end table.sort(playerList, function(a,b) return a.d < b.d end) idx = 1 selBtn.Text = #playerList>0 and "Selected: "..playerList[idx].p.DisplayName or "Selected: None" end
+
+Players.PlayerAdded:Connect(refreshList) Players.PlayerRemoving:Connect(refreshList) lp.CharacterAdded:Connect(function() wait(1); refreshList() end) searchBox:GetPropertyChangedSignal("Text"):Connect(refreshList) refreshList()
+
+local function detach() if alignPos then alignPos:Destroy() end if alignOri then alignOri:Destroy() end if att0 then att0:Destroy() end if att1 then att1:Destroy() end attached = false attachBtn.Text = "Attach: OFF" end
+
+local function attachTo(p) detach() local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") local thrp = p.Character and p.Character:FindFirstChild("HumanoidRootPart") if not hrp or not thrp then return end local mode = modes[modeIndex] local offsetVec = Vector3.new(0,0,0) if mode=="behind" then offsetVec = Vector3.new(0,0,dist) elseif mode=="front" then offsetVec = Vector3.new(0,0,-dist) elseif mode=="left" then offsetVec = Vector3.new(-dist,0,0) elseif mode=="right" then offsetVec = Vector3.new(dist,0,0) end hrp.CFrame = thrp.CFrame * CFrame.new(offsetVec) att0 = Instance.new("Attachment", hrp) att1 = Instance.new("Attachment", thrp) att1.Position = offsetVec alignPos = Instance.new("AlignPosition", hrp) alignPos.Attachment0, alignPos.Attachment1 = att0, att1 alignPos.Responsiveness, alignPos.MaxForce = 50,1e6 alignOri = Instance.new("AlignOrientation", hrp) alignOri.Attachment0, alignOri.Attachment1 = att0, att1 alignOri.Responsiveness, alignOri.MaxTorque = 50,1e6 attached = true attachBtn.Text = "Attach: ON" end
+
+prevBtn.MouseButton1Click:Connect(function() if #playerList>0 then idx = idx>1 and idx-1 or #playerList; selBtn.Text="Selected: "..playerList[idx].p.DisplayName; if attached then attachTo(playerList[idx].p) end end end) nextBtn.MouseButton1Click:Connect(function() if #playerList>0 then idx = idx<#playerList and idx+1 or 1; selBtn.Text="Selected: "..playerList[idx].p.DisplayName; if attached then attachTo(playerList[idx].p) end end end) selBtn.MouseButton1Click:Connect(function() if playerList[idx] then attachTo(playerList[idx].p) end end) attachBtn.MouseButton1Click:Connect(function() if attached then detach() else if playerList[idx] then attachTo(playerList[idx].p) end end end) dirBtn.MouseButton1Click:Connect(function() modeIndex = modeIndex<#modes and modeIndex+1 or 1 dirBtn.Text = "Direction: "..(modes[modeIndex]:sub(1,1):upper()..modes[modeIndex]:sub(2)) if attached and playerList[idx] then attachTo(playerList[idx].p) end end) distDec.MouseButton1Click:Connect(function() if dist>1 then dist=dist-1 end; distBox.Text=tostring(dist); if attached and playerList[idx] then attachTo(playerList[idx].p) end end) distInc.MouseButton1Click:Connect(function() dist=dist+1; distBox.Text=tostring(dist); if attached and playerList[idx] then attachTo(playerList[idx].p) end end) copyBtn.MouseButton1Click:Connect(function() local e=playerList[idx]; if e and e.p then pcall(function() setclipboard(e.p.DisplayName) end) end end) closeBtn.MouseButton1Click:Connect(function() detach(); screen:Destroy() end) minimizeBtn.MouseButton1Click:Connect(function() frame.Visible=false; miniBtn.Position=frame.Position; miniBtn.Visible=true end) miniBtn.MouseButton1Click:Connect(function() frame.Position=miniBtn.Position; frame.Visible=true; miniBtn.Visible=false end)
+
+-- Drag frame local frameDragging, frameDragInput, frameDragStart, frameStartPos frame.InputBegan:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then frameDragging=true; frameDragStart=input.Position; frameStartPos=frame.Position input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then frameDragging=false end end) end end) frame.InputChanged:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then frameDragInput=input end end)
+
+-- Drag miniBtn local miniDragging, miniDragInput, miniDragStart, miniStartPos miniBtn.InputBegan:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then miniDragging=true; miniDragStart=input.Position; miniStartPos=miniBtn.Position input.Changed:Connect(function() if input.UserInputState==Enum.UserInputState.End then miniDragging=false end end) end end) miniBtn.InputChanged:Connect(function(input) if input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch then miniDragInput=input end end)
+
+UIS.InputChanged:Connect(function(input) if frameDragging and input==frameDragInput then local delta=input.Position-frameDragStart frame.Position=UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset+delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset+delta.Y) elseif miniDragging and input==miniDragInput then local delta=input.Position-miniDragStart miniBtn.Position=UDim2.new(miniStartPos.X.Scale, miniStartPos.X.Offset+delta.X, miniStartPos.Y.Scale, miniStartPos.Y.Offset+delta.Y) end end)
+
+
     else
         -- Destroy attach tool GUI safely here
     end
