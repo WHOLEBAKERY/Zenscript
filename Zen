@@ -558,6 +558,8 @@ local attached = false
 local alignPos, alignOri, att0, att1
 local playerList = {}
 local idx = 1
+local modes = {"behind", "front", "left", "right"}
+local modeIndex = 1
 
 local function refreshList()
 	playerList = {}
